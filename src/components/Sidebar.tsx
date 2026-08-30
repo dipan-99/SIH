@@ -7,6 +7,13 @@ export default function Sidebar() {
   const setDisplayMode = useStore((state) => state.setDisplayMode);
   const setConfidenceThreshold = useStore((state) => state.setConfidenceThreshold);
 
+  const showMesh = useStore((state) => state.showMesh);
+  const showPointCloud = useStore((state) => state.showPointCloud);
+  const showGrid = useStore((state) => state.showGrid);
+  const setShowMesh = useStore((state) => state.setShowMesh);
+  const setShowPointCloud = useStore((state) => state.setShowPointCloud);
+  const setShowGrid = useStore((state) => state.setShowGrid);
+
   return (
     <div className="w-full h-full bg-gray-900 text-gray-100 overflow-y-auto p-6 flex flex-col gap-6 font-sans">
       
@@ -62,12 +69,16 @@ export default function Sidebar() {
         <h2 className="text-sm font-semibold mb-3 uppercase tracking-wider text-gray-400">Layers</h2>
         <div className="flex flex-col gap-3">
           <label className="flex items-center gap-3 cursor-pointer group">
-            <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-gray-600 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-gray-800 bg-gray-700 cursor-pointer" />
+            <input type="checkbox" checked={showMesh} onChange={(e) => setShowMesh(e.target.checked)} className="w-4 h-4 rounded border-gray-600 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-gray-800 bg-gray-700 cursor-pointer" />
             <span className="text-sm text-gray-300 group-hover:text-white transition-colors">Base Mesh</span>
           </label>
           <label className="flex items-center gap-3 cursor-pointer group">
-            <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-gray-600 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-gray-800 bg-gray-700 cursor-pointer" />
+            <input type="checkbox" checked={showPointCloud} onChange={(e) => setShowPointCloud(e.target.checked)} className="w-4 h-4 rounded border-gray-600 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-gray-800 bg-gray-700 cursor-pointer" />
             <span className="text-sm text-gray-300 group-hover:text-white transition-colors">Point Cloud Overlay</span>
+          </label>
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} className="w-4 h-4 rounded border-gray-600 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-gray-800 bg-gray-700 cursor-pointer" />
+            <span className="text-sm text-gray-300 group-hover:text-white transition-colors">Grid Helper</span>
           </label>
         </div>
       </section>
