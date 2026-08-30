@@ -8,63 +8,91 @@ function ModelLoader() {
     const { scene } = useGLTF('/assets/model.glb');
     const displayMode = useStore((state) => state.displayMode);
     const confidenceThreshold = useStore((state) => state.confidenceThreshold);
+    const setStats = useStore((state) => state.setStats);
 
     useEffect(() => {
+        let totalVertices = 0;
+        let highCount = 0;
+        let mediumCount = 0;
+        let lowCount = 0;
+
         scene.traverse((child) => {
-            if (child instanceof THREE.Mesh && child.material) {
-                // Clone material to avoid modifying the cached GLTF material directly
-                child.material = child.material.clone();
-                child.material.vertexColors = true;
+            if (child instanceof THREE.Mesh) {
+                // Calculate stats from vertex colors
+                if (child.geometry && child.geometry.attributes.color) {
+                    const colorAttr = child.geometry.attributes.color;
+                    for (let i = 0; i < colorAttr.count; i++) {
+                        const r = colorAttr.getX(i); // Red channel is stored as X
+                        if (r >= 0.7) highCount++;
+                        else if (r >= 0.3) mediumCount++;
+                        else lowCount++;
+                        totalVertices++;
+                    }
+                }
 
-                const customUniforms = {
-                    uDisplayMode: { value: displayMode },
-                    uConfidenceThreshold: { value: confidenceThreshold }
-                };
+                if (child.material) {
+                    // Clone material to avoid modifying the cached GLTF material directly
+                    child.material = child.material.clone();
+                    child.material.vertexColors = true;
 
-                child.material.userData.uniforms = customUniforms;
+                    const customUniforms = {
+                        uDisplayMode: { value: displayMode },
+                        uConfidenceThreshold: { value: confidenceThreshold }
+                    };
 
-                child.material.onBeforeCompile = (shader: THREE.WebGLProgramParametersWithUniforms) => {
-                    shader.uniforms.uDisplayMode = customUniforms.uDisplayMode;
-                    shader.uniforms.uConfidenceThreshold = customUniforms.uConfidenceThreshold;
+                    child.material.userData.uniforms = customUniforms;
 
-                    shader.fragmentShader = shader.fragmentShader.replace(
-                        '#include <common>',
-                        `
-                        #include <common>
-                        uniform int uDisplayMode;
-                        uniform float uConfidenceThreshold;
-                        `
-                    );
+                    child.material.onBeforeCompile = (shader: THREE.WebGLProgramParametersWithUniforms) => {
+                        shader.uniforms.uDisplayMode = customUniforms.uDisplayMode;
+                        shader.uniforms.uConfidenceThreshold = customUniforms.uConfidenceThreshold;
 
-                    shader.fragmentShader = shader.fragmentShader.replace(
-                        '#include <color_fragment>',
-                        `
-                        #ifdef USE_COLOR
-                            float confidence = vColor.r;
+                        shader.fragmentShader = shader.fragmentShader.replace(
+                            '#include <common>',
+                            `
+                            #include <common>
+                            uniform int uDisplayMode;
+                            uniform float uConfidenceThreshold;
+                            `
+                        );
 
-                            if (uDisplayMode == 2 && confidence < uConfidenceThreshold) {
-                                discard;
-                            }
+                        shader.fragmentShader = shader.fragmentShader.replace(
+                            '#include <color_fragment>',
+                            `
+                            #ifdef USE_COLOR
+                                float confidence = vColor.r;
 
-                            if (uDisplayMode == 1) {
-                                vec3 c1 = vec3(1.0, 0.0, 0.0);
-                                vec3 c2 = vec3(1.0, 0.75, 0.0);
-                                vec3 c3 = vec3(0.0, 1.0, 0.2);
-                                
-                                float t1 = smoothstep(0.0, 0.5, confidence);
-                                float t2 = smoothstep(0.5, 1.0, confidence);
-                                
-                                vec3 heatmapColor = mix(mix(c1, c2, t1), c3, t2);
-                                diffuseColor.rgb = heatmapColor;
-                            }
-                        #endif
-                        `
-                    );
-                };
-                child.material.needsUpdate = true;
+                                if (uDisplayMode == 2 && confidence < uConfidenceThreshold) {
+                                    discard;
+                                }
+
+                                if (uDisplayMode == 1) {
+                                    vec3 c1 = vec3(1.0, 0.0, 0.0);
+                                    vec3 c2 = vec3(1.0, 0.75, 0.0);
+                                    vec3 c3 = vec3(0.0, 1.0, 0.2);
+                                    
+                                    float t1 = smoothstep(0.0, 0.5, confidence);
+                                    float t2 = smoothstep(0.5, 1.0, confidence);
+                                    
+                                    vec3 heatmapColor = mix(mix(c1, c2, t1), c3, t2);
+                                    diffuseColor.rgb = heatmapColor;
+                                }
+                            #endif
+                            `
+                        );
+                    };
+                    child.material.needsUpdate = true;
+                }
             }
         });
-    // We only want to run this once when the scene loads to inject the shader
+
+        if (totalVertices > 0) {
+            setStats({
+                high: (highCount / totalVertices) * 100,
+                medium: (mediumCount / totalVertices) * 100,
+                low: (lowCount / totalVertices) * 100
+            });
+        }
+    // We only want to run this once when the scene loads to inject the shader and calculate stats
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [scene]);
 
