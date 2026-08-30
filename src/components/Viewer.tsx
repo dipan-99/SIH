@@ -1,5 +1,5 @@
-import { Canvas, useLoader } from '@react-three/fiber';
-import { OrbitControls, Bounds, Center, useGLTF } from '@react-three/drei';
+import { Canvas, useLoader, type ThreeEvent } from '@react-three/fiber';
+import { OrbitControls, Bounds, Center, useGLTF, Html, Line } from '@react-three/drei';
 import { Suspense, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { PLYLoader } from 'three-stdlib';
@@ -11,6 +11,11 @@ function ModelLoader() {
     const confidenceThreshold = useStore((state) => state.confidenceThreshold);
     const setStats = useStore((state) => state.setStats);
     const showMesh = useStore((state) => state.showMesh);
+    
+    // Measure Mode State
+    const isMeasureMode = useStore((state) => state.isMeasureMode);
+    const measurePoints = useStore((state) => state.measurePoints);
+    const setMeasurePoints = useStore((state) => state.setMeasurePoints);
 
     useEffect(() => {
         let totalVertices = 0;
@@ -108,7 +113,23 @@ function ModelLoader() {
         });
     }, [displayMode, confidenceThreshold, scene]);
 
-    return <primitive object={scene} visible={showMesh} />;
+    const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
+        if (!isMeasureMode) return;
+        
+        e.stopPropagation(); // Prevent other interactions
+        
+        const point: [number, number, number] = [e.point.x, e.point.y, e.point.z];
+        
+        if (measurePoints.length === 0 || measurePoints.length === 2) {
+            // First click (or reset after two points)
+            setMeasurePoints([point]);
+        } else if (measurePoints.length === 1) {
+            // Second click
+            setMeasurePoints([...measurePoints, point]);
+        }
+    };
+
+    return <primitive object={scene} visible={showMesh} onPointerDown={handlePointerDown} />;
 }
 
 function PointCloudLoader() {
@@ -218,11 +239,89 @@ function PointCloudLoader() {
     );
 }
 
-export default function Viewer() {
-    const showGrid = useStore((state) => state.showGrid);
+function MeasureTool() {
+    const measurePoints = useStore((state) => state.measurePoints);
+    const globalScaleFactor = useStore((state) => state.globalScaleFactor);
+    const isMeasureMode = useStore((state) => state.isMeasureMode);
+
+    if (!isMeasureMode || measurePoints.length === 0) return null;
+
+    const p1 = new THREE.Vector3(...measurePoints[0]);
+    let p2: THREE.Vector3 | null = null;
+    let distance = 0;
+    let midpoint = new THREE.Vector3();
+
+    if (measurePoints.length === 2) {
+        p2 = new THREE.Vector3(...measurePoints[1]);
+        distance = p1.distanceTo(p2) * globalScaleFactor;
+        midpoint = p1.clone().lerp(p2, 0.5);
+    }
 
     return (
-        <Canvas camera={{ position: [0, 5, 10], fov: 50 }}>
+        <group>
+            {/* Marker 1 */}
+            <mesh position={p1}>
+                <sphereGeometry args={[0.05, 16, 16]} />
+                <meshBasicMaterial color="orange" depthTest={false} />
+            </mesh>
+
+            {/* Marker 2 & Line & Label */}
+            {p2 && (
+                <>
+                    <mesh position={p2}>
+                        <sphereGeometry args={[0.05, 16, 16]} />
+                        <meshBasicMaterial color="orange" depthTest={false} />
+                    </mesh>
+
+                    <Line
+                        points={[p1, p2]}
+                        color="orange"
+                        lineWidth={3}
+                        depthTest={false}
+                    />
+
+                    <Html position={midpoint} center zIndexRange={[100, 0]}>
+                        <div className="bg-gray-900/90 text-white px-3 py-1.5 rounded-lg border border-orange-500/50 shadow-lg font-mono text-sm whitespace-nowrap backdrop-blur-sm pointer-events-none transform -translate-y-6">
+                            {distance.toFixed(2)} m
+                        </div>
+                    </Html>
+                </>
+            )}
+        </group>
+    );
+}
+
+export default function Viewer() {
+    const showGrid = useStore((state) => state.showGrid);
+    const isMeasureMode = useStore((state) => state.isMeasureMode);
+    const setIsMeasureMode = useStore((state) => state.setIsMeasureMode);
+    const setGlobalScaleFactor = useStore((state) => state.setGlobalScaleFactor);
+
+    // Escape Key Listener
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setIsMeasureMode(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [setIsMeasureMode]);
+
+    // Fetch scale factor from manifest
+    useEffect(() => {
+        fetch('/assets/viewer_manifest.json')
+            .then(res => res.json())
+            .then(data => {
+                if (data.global_scale_factor) {
+                    setGlobalScaleFactor(data.global_scale_factor);
+                }
+            })
+            .catch(err => console.error("Error loading manifest for scale factor:", err));
+    }, [setGlobalScaleFactor]);
+
+    return (
+        <Canvas camera={{ position: [0, 5, 10], fov: 50 }} style={{ cursor: isMeasureMode ? 'crosshair' : 'auto' }}>
             <ambientLight intensity={0.5} />
             <directionalLight position={[10, 10, 10]} intensity={1} />
 
@@ -231,12 +330,14 @@ export default function Viewer() {
                     <Center>
                         <ModelLoader />
                         <PointCloudLoader />
+                        <MeasureTool />
                     </Center>
                 </Bounds>
             </Suspense>
 
             {showGrid && <gridHelper args={[20, 20]} />}
-            <OrbitControls makeDefault />
+            {/* Disable OrbitControls when picking points to prevent dragging the camera */}
+            <OrbitControls makeDefault enabled={!isMeasureMode} />
         </Canvas>
     );
 }

@@ -14,6 +14,9 @@ interface ViewerState {
     showMesh: boolean;
     showPointCloud: boolean;
     showGrid: boolean;
+    isMeasureMode: boolean;
+    measurePoints: [number, number, number][];
+    globalScaleFactor: number;
     setActiveTab: (tab: 'viewer' | 'benchmark') => void;
     setDisplayMode: (mode: number) => void;
     setConfidenceThreshold: (threshold: number) => void;
@@ -21,6 +24,9 @@ interface ViewerState {
     setShowMesh: (show: boolean) => void;
     setShowPointCloud: (show: boolean) => void;
     setShowGrid: (show: boolean) => void;
+    setIsMeasureMode: (isMeasure: boolean) => void;
+    setMeasurePoints: (points: [number, number, number][]) => void;
+    setGlobalScaleFactor: (scale: number) => void;
 }
 
 export const useStore = create<ViewerState>((set) => ({
@@ -31,6 +37,9 @@ export const useStore = create<ViewerState>((set) => ({
     showMesh: true,
     showPointCloud: true,
     showGrid: true,
+    isMeasureMode: false,
+    measurePoints: [],
+    globalScaleFactor: 1.0,
     setActiveTab: (tab) => set({ activeTab: tab }),
     setDisplayMode: (mode) => set({ displayMode: mode }),
     setConfidenceThreshold: (threshold) => set({ confidenceThreshold: threshold }),
@@ -38,4 +47,7 @@ export const useStore = create<ViewerState>((set) => ({
     setShowMesh: (show) => set({ showMesh: show }),
     setShowPointCloud: (show) => set({ showPointCloud: show }),
     setShowGrid: (show) => set({ showGrid: show }),
+    setIsMeasureMode: (isMeasure) => set({ isMeasureMode: isMeasure, measurePoints: [] }),
+    setMeasurePoints: (points) => set({ measurePoints: points }),
+    setGlobalScaleFactor: (scale) => set({ globalScaleFactor: scale }),
 }));

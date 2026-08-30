@@ -14,6 +14,9 @@ export default function Sidebar() {
   const setShowPointCloud = useStore((state) => state.setShowPointCloud);
   const setShowGrid = useStore((state) => state.setShowGrid);
 
+  const isMeasureMode = useStore((state) => state.isMeasureMode);
+  const setIsMeasureMode = useStore((state) => state.setIsMeasureMode);
+
   return (
     <div className="w-full h-full bg-gray-900 text-gray-100 overflow-y-auto p-6 flex flex-col gap-6 font-sans">
       
@@ -64,7 +67,22 @@ export default function Sidebar() {
         </section>
       )}
 
-      {/* 3. Layers */}
+      {/* 3. Tools */}
+      <section className="bg-gray-800 p-4 rounded-xl border border-gray-700 shadow-sm">
+        <h2 className="text-sm font-semibold mb-3 uppercase tracking-wider text-gray-400">Tools</h2>
+        <button
+          onClick={() => setIsMeasureMode(!isMeasureMode)}
+          className={`w-full px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 text-center ${
+            isMeasureMode 
+              ? 'bg-amber-600 text-white shadow-md hover:bg-amber-700' 
+              : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+          }`}
+        >
+          {isMeasureMode ? 'Exit Measure Mode (Esc)' : 'Measure Distance'}
+        </button>
+      </section>
+
+      {/* 4. Layers */}
       <section className="bg-gray-800 p-4 rounded-xl border border-gray-700 shadow-sm">
         <h2 className="text-sm font-semibold mb-3 uppercase tracking-wider text-gray-400">Layers</h2>
         <div className="flex flex-col gap-3">

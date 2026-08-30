@@ -12,5 +12,6 @@
       "trajectoryRMSE": 0.0528,
       "relativeScaleError": 0.021
     }
-  }
+  },
+  "global_scale_factor": 2.5
 }
