@@ -1,0 +1,16 @@
+{
+  "benchmark": {
+    "baseline": {
+      "flightDuration": 120,
+      "processingDuration": 300,
+      "trajectoryRMSE": 0.05,
+      "relativeScaleError": 0.02
+    },
+    "ours": {
+      "flightDuration": 10.08,
+      "processingDuration": 150,
+      "trajectoryRMSE": 0.0528,
+      "relativeScaleError": 0.021
+    }
+  }
+}
